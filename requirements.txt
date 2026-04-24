@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-huggingface==0.3.1
+langchain-groq==0.2.5
+sentence-transformers==3.0.1
+faiss-cpu==1.10.0
+einops==0.8.1
+python-dotenv
+pypdf
+-e .
