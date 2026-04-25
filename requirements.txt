@@ -9,4 +9,6 @@ faiss-cpu==1.10.0
 einops==0.8.1
 python-dotenv
 pypdf
+streamlit 
+requests
 -e .

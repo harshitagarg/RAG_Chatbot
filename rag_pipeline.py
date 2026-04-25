@@ -1,12 +1,16 @@
 # Import Libraries
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
-
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import TextLoader
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
+from langchain_community.document_loaders import WebBaseLoader, PyPDFLoader
+from langchain_community.vectorstores import FAISS
+# Import the RetrievalQA chain for question-answering tasks
 
+from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
 import os
 from dotenv import load_dotenv
 
@@ -16,9 +20,6 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 HF_TOKEN = os.getenv("HUGGING_FACE_API_KEY")
 
 # Import necessary libraries
-from langchain_community.document_loaders import WebBaseLoader, PyPDFLoader
-from langchain_community.vectorstores import FAISS
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def get_retriever(query):
     query = query.lower()
@@ -30,6 +31,15 @@ def get_retriever(query):
     else:
         return llm_retriever  # default
     
+def format_sources(docs):
+    return [
+        {
+            "content": doc.page_content[:200],  # optional preview
+            "source": doc.metadata.get("source", "unknown")
+        }
+        for doc in docs
+    ]
+
 # Load the PDF
 folder_path = "data/"
 
@@ -66,7 +76,7 @@ sql_retriever = FAISS.from_documents(sql_docs, embedding).as_retriever(search_ty
 rag_retriever = FAISS.from_documents(rag_docs, embedding).as_retriever(search_type='mmr',search_kwargs={"k": 5, "fetch_k":10})
 llm_retriever = FAISS.from_documents(llm_docs, embedding).as_retriever(search_type='mmr',search_kwargs={"k": 5, "fetch_k":10}) 
 
-from langchain.prompts import PromptTemplate
+
 
 prompt_template = """
 
@@ -80,7 +90,7 @@ If the question is asking for:
 - suggestions
 - explanations
 
-Then you are allowed to generate answers based on your knowledge,
+Then you are allowed to generate answers based gon your knowledge,
 while using the context as guidance.
 
 If the answer is completely unrelated to context, say "I don't know".
@@ -100,10 +110,7 @@ prompt = PromptTemplate(
     input_variables=["context", "question"]
 )
 
-# Import the RetrievalQA chain for question-answering tasks
-from langchain.chains import RetrievalQA
-from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
+
 
 # Define a query and retrieve relevant documents
 # query = "Please generate 5 sql queries with answer"
@@ -114,25 +121,22 @@ llm = ChatGroq(
 )
 
 
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, output_key="answer")
 
-print("🤖 Chatbot ready! Type 'exit' to quit.\n")
-
-while True:
-    query = input("You: ")
-
-    if query.lower() == "exit":
-        break
-
+def get_response(query):
     retriever = get_retriever(query)
 
     chat_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=retriever,
         memory=memory,
-        combine_docs_chain_kwargs={"prompt": prompt}
+        combine_docs_chain_kwargs={"prompt": prompt},
+        return_source_documents=True
     )
 
     response = chat_chain.invoke({"question": query})
 
-    print("\nBot:", response["answer"], "\n")
+    return {
+    "answer": response.get("answer", ""),
+    "source_documents": format_sources(response.get("source_documents", []))
+}
