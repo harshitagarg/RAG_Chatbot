@@ -26,6 +26,7 @@ if query and query.strip():
         st.session_state.chat.append(("Bot", answer, source_text))
 
 for role, msg, src in st.session_state.chat:
+    
     st.write(f"**{role}:** {msg}")
     
     if role == "Bot" and src:

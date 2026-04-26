@@ -26,7 +26,7 @@ def get_retriever(query):
     
     if "sql" in query:
         return sql_retriever
-    elif "rag" in query or "llm" in query:
+    elif "rag" in query:
         return rag_retriever
     else:
         return llm_retriever  # default
@@ -90,7 +90,7 @@ If the question is asking for:
 - suggestions
 - explanations
 
-Then you are allowed to generate answers based gon your knowledge,
+Then you are allowed to generate answers based on your knowledge,
 while using the context as guidance.
 
 If the answer is completely unrelated to context, say "I don't know".
